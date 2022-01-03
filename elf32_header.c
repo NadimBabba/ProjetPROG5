@@ -1,7 +1,7 @@
-#include<stdio.h> 
-#include<fcntl.h> 
-#include<errno.h> 
-#include<string.h> 
+#include <stdio.h> 
+#include <fcntl.h> 
+#include <errno.h> 
+#include <string.h> 
 #include <malloc.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -143,6 +143,51 @@ void printsection(Elf32_Ehdr* elfhdr, int indx) {
     printf ("  %2d", ELF32_R_VAL(shrd->sh_info));
     printf (" %2d\n", ELF32_R_VAL(shrd->sh_addralign));
 }
+void printhexasectionindex(Elf32_Ehdr* elfhdr, int indx) {
+    Elf32_Shdr *shrd = ElfSection(elfhdr, indx);
+    char * strname = (char*) shstrtab + ELF32_R_VAL(shrd->sh_name);
+    printf("Hex dump of section '%s':\n", strname);
+    char* shdata = (char*) elfhdr + ELF32_R_VAL(shrd->sh_offset) + 256;
+    for (int i=0; i< offset(shrd->sh_size); ) {
+
+       printf("  0x%08x ", i);
+       int k=0;
+       for (int j=0; j<16;j++) {
+         if (i+j > offset(shrd->sh_size)) {
+            printf("  ");
+         } else {
+           printf("%02x",  (shdata[i+j]));
+         }
+         k++;
+         if (k ==4) { printf(" "); k=0;}
+       }
+
+       for (int j=0; j<16;j++) { 
+         if (i+j > offset(shrd->sh_size)) break;       
+         printf("%c",  (shdata[i+j]) ? (shdata[i+j]) : '.');
+       }
+
+       printf("\n");
+       i=i+16;
+    }
+}
+void printhexasectionname(Elf32_Ehdr* elfhdr, char* sname) {
+    int indx = -1 ;
+    for (int i=0; i<ELF32_R_SYM(elfhdr->e_shnum); i++) {
+      Elf32_Shdr *shrd = ElfSection(elfhdr, i);
+      char * strname = (char*) shstrtab + ELF32_R_VAL(shrd->sh_name);
+      if (!strcmp(strname, sname)) {
+         indx = i; 
+         break;
+       }
+    }
+    if (indx == -1) {
+      printf("readelf: Warning: Section '%s' was not dumped because it does not exist!\n", sname);
+      return;
+    }
+    printf("Hex dump of section %s %d\n", sname, indx);
+}
+
 
 int main(int argc, char *argv[]) 
 {
@@ -204,7 +249,17 @@ int main(int argc, char *argv[])
         printf("  O (extra OS processing required) o (OS specific), p (processor specific)\n");
        }
        
+      if ( !strcmp(argv[1], "-x")) {
+         int nums = atoi(argv[2]);        
+         if (nums && strcmp(argv[2], "0")) {
+            printhexasectionindex((Elf32_Ehdr*) allelf, nums);
+         } else {
+            printhexasectionname((Elf32_Ehdr*) allelf, argv[2]);
+         }
 
+      }
+    
+ 
     
     close (fd);
    return 0;

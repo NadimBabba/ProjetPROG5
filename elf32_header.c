@@ -97,12 +97,58 @@ Elf32_Shdr *ElfSection(Elf32_Ehdr *hdr, int idx) {
 
 char* shstrtab;
 
+void printsection(Elf32_Ehdr* elfhdr, int indx) {
+    Elf32_Shdr *shrd = ElfSection(elfhdr, indx);
+    if (indx==0) {
+       printf("There are %d section headers, starting at offset 0x%x:\n\nSection Headers:\n",ELF32_R_SYM(elfhdr->e_shnum), offset(elfhdr->e_shoff) );
+       printf("  [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al\n");
+     }
+    printf ("  [%2d] ", indx);  
+    char * strname = (char*) shstrtab + ELF32_R_VAL(shrd->sh_name);
+    char strncopy[19];
+    strncpy(strncopy, strname, 17); 
+    strncopy[17]=0;
+    printf ("%-17s", strncopy);   
+
+    switch (ELF32_R_VAL(shrd->sh_type)) 
+    {
+      case SHT_NULL : printf (" %-15s", "NULL"); break;     
+      case SHT_PROGBITS : printf (" %-15s", "PROGBITS"); break;      
+      case SHT_SYMTAB : printf (" %-15s", "SYMTAB"); break;
+      case SHT_STRTAB : if (!strcmp(strncopy, ".ARM.attributes"))
+			    printf (" %-15s", "ARM_ATTRIBUTES"); 
+                        else
+			    printf (" %-15s", "STRTAB"); 
+			break;
+      case SHT_RELA : printf (" %-15s", "RELA"); break;
+      case SHT_HASH : printf (" %-15s", "HASH"); break;
+      case SHT_DYNAMIC : printf (" %-15s", "DYNAMIC"); break;
+      case SHT_NOTE : printf (" %-15s", "NOTE"); break;
+      case SHT_NOBITS : printf (" %-15s", "NOBITS"); break;
+      case SHT_REL : printf (" %-15s", "REL"); break;
+      default :printf (" 0x%x", shrd->sh_type); break;
+    }
+    printf (" %08x", shrd->sh_addr);
+    printf (" %06x", offset(shrd->sh_offset));
+    printf (" %06x", offset(shrd->sh_size));
+    printf (" %02x", ELF32_R_VAL(shrd->sh_entsize));
+    char FlagStr[4];
+    int i =0;
+    if (ELF32_R_VAL(shrd->sh_flags) & SHF_WRITE) FlagStr[i++] = 'W';
+    if (ELF32_R_VAL(shrd->sh_flags) & SHF_ALLOC) FlagStr[i++] = 'A';
+    if (ELF32_R_VAL(shrd->sh_flags) & SHF_EXECINSTR) FlagStr[i++] = 'X';
+    FlagStr[i++] = '\0';
+    printf ("  %-2s", FlagStr);
+    printf (" %2d", ELF32_R_VAL(shrd->sh_link));
+    printf ("  %2d", ELF32_R_VAL(shrd->sh_info));
+    printf (" %2d\n", ELF32_R_VAL(shrd->sh_addralign));
+}
 
 int main(int argc, char *argv[]) 
 {
     char* allelf;
     Elf32_Ehdr* elfhdr;
-    int fd;
+    int fd, i;
 
     if (argc < 3) {
         printf("Usage : elf_header option <ELF File name>\nWhere Option is :\n");
@@ -148,6 +194,16 @@ int main(int argc, char *argv[])
       }
 
 
+      if ( !strcmp(argv[1], "--section-headers") || !strcmp(argv[1], "-S") || !strcmp(argv[1], "--sections")) {
+        for (i=0; i<ELF32_R_SYM(elfhdr->e_shnum); i++) {
+          printsection((Elf32_Ehdr*) allelf, i);
+        }
+        printf("Key to Flags:\n");
+        printf("  W (write), A (alloc), X (execute), M (merge), S (strings)\n");
+        printf("  I (info), L (link order), G (group), T (TLS), E (exclude), x (unknown)\n");
+        printf("  O (extra OS processing required) o (OS specific), p (processor specific)\n");
+       }
+       
 
     
     close (fd);

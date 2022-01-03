@@ -1,0 +1,17 @@
+#!/bin/csh
+foreach f ( example1.o example2.o example3.o example4.o ) 
+   echo $f
+#   foreach opt ( -file-header  )
+#   foreach opt ( -file-header -section-headers )
+   foreach opt ( -file-header -section-headers s )
+     arm-eabi-readelf -$opt $f > $f.readelf.out
+     ../elf32_phase1 -$opt $f > $f.phase1.out
+     set nbdif = `diff $f.readelf.out $f.phase1.out | wc -l`
+     if ( $nbdif == 0) then
+       echo $f " Passed " -$opt
+     else
+       echo $f " Failed " -$opt
+       diff $f.readelf.out $f.phase1.out 
+     endif
+   end
+end

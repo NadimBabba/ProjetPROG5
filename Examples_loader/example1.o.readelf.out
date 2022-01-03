@@ -1,0 +1,17 @@
+
+Symbol table '.symtab' contains 14 entries:
+   Num:    Value  Size Type    Bind   Vis      Ndx Name
+     0: 00000000     0 NOTYPE  LOCAL  DEFAULT  UND 
+     1: 00000000     0 SECTION LOCAL  DEFAULT    1 
+     2: 00000000     0 SECTION LOCAL  DEFAULT    2 
+     3: 00000000     0 SECTION LOCAL  DEFAULT    3 
+     4: 00000000     0 NOTYPE  LOCAL  DEFAULT    1 $a
+     5: 00000004     0 NOTYPE  LOCAL  DEFAULT    1 loop
+     6: 0000000c     0 NOTYPE  LOCAL  DEFAULT    1 end
+     7: 00000000     0 SECTION LOCAL  DEFAULT    7 
+     8: 0000000c     0 NOTYPE  LOCAL  DEFAULT   10 $d
+     9: 00000000     0 SECTION LOCAL  DEFAULT    9 
+    10: 00000000     0 SECTION LOCAL  DEFAULT    5 
+    11: 00000000     0 SECTION LOCAL  DEFAULT   10 
+    12: 00000000     0 SECTION LOCAL  DEFAULT    4 
+    13: 00000000     0 NOTYPE  GLOBAL DEFAULT    1 main

@@ -188,6 +188,14 @@ void printhexasectionname(Elf32_Ehdr* elfhdr, char* sname) {
     printf("Hex dump of section %s %d\n", sname, indx);
 }
 
+void usage()
+{
+  printf("Usage : elf_header option <ELF File name>\nWhere Option is :\n");
+  printf("\t--file-header       Display the ELF file header\n");
+  printf("\t--section-headers   Display the sections' header\n");
+  printf("\t-s --syms           Display the symbol table\n");
+}
+
 
 int main(int argc, char *argv[]) 
 {
@@ -196,9 +204,7 @@ int main(int argc, char *argv[])
     int fd, i;
 
     if (argc < 3) {
-        printf("Usage : elf_header option <ELF File name>\nWhere Option is :\n");
-        printf("\t--file-header       Display the ELF file header\n");
-        printf("\t--section-headers   Display the sections' header\n");
+        usage();
         return 1;
     }
 

@@ -13,10 +13,10 @@ typedef unsigned int Elf32_Word; // 4 4 Unsigned large integer
 
 enum Elf32_Ehdr_type {
     ET_NONE_type = 0 ,       //No file type
-    ET_REL = 1 ,            //Relocatable file
-    ET_EXEC = 2 ,       //Executable file
-    ET_DYN = 3 ,            //Shared object file
-    ET_CORE = 4 ,       //Core file
+    ET_REL = 0x0100 ,            //Relocatable file
+    ET_EXEC = 0x0200 ,       //Executable file
+    ET_DYN = 0x0300 ,            //Shared object file
+    ET_CORE = 0x0400 ,       //Core file
     ET_LOPROC = 0xff00 ,    //Processor-specific
     ET_HIPROC = 0xffff      //Processor-specific
 };
@@ -31,7 +31,7 @@ enum Elf32_Ehdr_machine {
     EM_860 = 7 , //Intel 80860
     EM_MIPS = 8 , //MIPS RS3000 Big-Endian
     EM_MIPS_RS4_BE = 10 , //MIPS RS4000 Big-Endian
-    EM_ARM = 40 , //ARM Specification
+    EM_ARM = 0x2800 , //ARM Specification
     RESERVED = 11  //11-16 Reserved for future use
 };
 
@@ -48,6 +48,8 @@ enum Elf32_Ehdr_ident_index {
     EI_CLASS = 4 , // File class
     EI_DATA = 5 , // Data encoding
     EI_VERSION = 6 , // File version
+    EI_OSABI = 0x07,
+    EI_ABIVERSION = 0x08 ,
     EI_PAD = 7 , // Start of padding bytes
     EI_NIDENT = 16 // Size of e_ident[]
 };
@@ -82,6 +84,8 @@ enum elf32_flags {
     EF_ARM_ABI_FLOAT_SOFT = 0x00000200
 };
 
+
+
 typedef struct {
     unsigned char e_ident[EI_NIDENT];
     Elf32_Half e_type;
@@ -100,22 +104,16 @@ typedef struct {
 } Elf32_Ehdr;
 
 enum Elf32_Shdr_type { 
-    SHT_NULL = 0 ,
-    SHT_PROGBITS = 1 ,
-    SHT_SYMTAB = 2 ,
-    SHT_STRTAB = 3 ,
-    SHT_RELA = 4 ,
-    SHT_HASH = 5 ,
-    SHT_DYNAMIC = 6 ,
-    SHT_NOTE = 7 ,
-    SHT_NOBITS = 8 ,
-    SHT_REL = 9 ,
-    SHT_SHLIB = 10 ,
-    SHT_DYNSYM = 11 
-    //SHT_LOPROC = 0x70000000 ,
-    //SHT_HIPROC = 0x7fffffff ,
-    //SHT_LOUSER = 0x80000000 ,
-    //SHT_HIUSER = 0xffffffff
+    SHT_NULL = 0x0 ,
+    SHT_PROGBITS = 0x1 ,
+    SHT_SYMTAB = 0x2 ,
+    SHT_STRTAB = 0x3 ,
+    SHT_RELA = 0x4 ,
+    SHT_HASH = 0x5 ,
+    SHT_DYNAMIC = 0x6 ,
+    SHT_NOTE = 0x7 ,
+    SHT_NOBITS = 0x8 ,
+    SHT_REL = 0x9 ,
 };
 
 enum Elf32_Shdr_flags { 
@@ -183,6 +181,7 @@ typedef struct {
 #define ELF32_R_SYM(i) ((i)>>8)
 #define ELF32_R_TYPE(i) ((unsigned char)(i))
 #define ELF32_R_INFO(s,t) (((s)<<8)+(unsigned char)(t))
+#define ELF32_R_VAL(i) ((i)>>24)
 
 // Program Header
 typedef struct {
@@ -208,4 +207,5 @@ enum Elf32_Phdr_type {
             PT_HIPROC = 0x7fffffff
 };
 
+#define offset(i) (((((i/256)>>12)<<8)|((i/256)<<16)>>4)>>12)
 #endif

@@ -1,7 +1,7 @@
-#include <stdio.h> 
-#include <fcntl.h> 
-#include <errno.h> 
-#include <string.h> 
+#include<stdio.h> 
+#include<fcntl.h> 
+#include<errno.h> 
+#include<string.h> 
 #include <malloc.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -188,6 +188,68 @@ void printhexasectionname(Elf32_Ehdr* elfhdr, char* sname) {
     printf("Hex dump of section %s %d\n", sname, indx);
 }
 
+void printsymboltab(Elf32_Ehdr* elfhdr) {
+    int indx = -1 ;
+    char * strname;
+    for (int i=0; i<ELF32_R_SYM(elfhdr->e_shnum); i++) {
+      Elf32_Shdr *shrd = ElfSection(elfhdr, i);
+      strname = (char*) shstrtab + ELF32_R_VAL(shrd->sh_name);
+      if (ELF32_R_VAL(shrd->sh_type) == SHT_SYMTAB) {
+          indx = i; 
+         break;
+      }
+    }
+    if (indx == -1) {
+       return;
+    }
+
+    Elf32_Shdr *symtab = ElfSection(elfhdr, indx);
+    printf("\nSymbol table '%s' contains %d entries:\n", strname, ELF32_R_VAL(symtab->sh_size)/ELF32_R_VAL(symtab->sh_entsize));
+    printf("   Num:    Value  Size Type    Bind   Vis      Ndx Name\n");
+    char* symaddr = (char*)elfhdr + offset(symtab->sh_offset);
+
+
+    Elf32_Sym *symbol;
+    for(int i=0; i<ELF32_R_VAL(symtab->sh_size)/ELF32_R_VAL(symtab->sh_entsize); i++) {
+      symbol = &((Elf32_Sym *)symaddr)[i];
+      switch (symbol->st_shndx) {
+        case SHN_ABS: {
+		printf ("Absolute symbol\n");
+                break;
+	} 
+        case SHN_UNDEF : 
+        default:
+               {
+		Elf32_Shdr *strtab = ElfSection(elfhdr, ELF32_R_VAL(symtab->sh_link));
+ 		const char *name = (const char *)elfhdr + offset(strtab->sh_offset) + ELF32_R_VAL(symbol->st_name);
+                printf("%6d: %08x %5x", i, ELF32_R_VAL(symbol->st_value), ELF32_R_VAL(symbol->st_size));
+                switch(ELF32_ST_TYPE(symbol->st_info)) {
+		    case STT_NOTYPE: printf (" NOTYPE "); break;
+ 		    case STT_OBJECT: printf (" OBJECT "); break;
+ 		    case STT_FUNC: printf   (" FUN    "); break;
+  		    case STT_SECTION: printf(" SECTION"); break;
+  		    case STT_FILE: printf   (" FILE   "); break;
+ 		    default: printf(" TODO OTHER BIND"); break;
+                }
+                switch(ELF32_ST_BIND(symbol->st_info)) {
+		    case STB_LOCAL: printf (" LOCAL "); break;
+ 		    case STB_GLOBAL: printf(" GLOBAL"); break;
+ 		    case STB_WEAK: printf  (" WEAK  "); break;
+ 		    default: printf(" TODO OTHER BIND"); break;
+                }
+ 
+                printf(" DEFAULT");
+		if (ELF32_ST_BIND(symbol->st_shndx))
+                   printf(" %4d", ELF32_ST_BIND(symbol->st_shndx)/16);
+		else
+                   printf(" %4s", "UND");
+                printf(" %s\n", name);
+
+              } 
+       }
+     }
+}
+
 void usage()
 {
   printf("Usage : elf_header option <ELF File name>\nWhere Option is :\n");
@@ -195,7 +257,6 @@ void usage()
   printf("\t--section-headers   Display the sections' header\n");
   printf("\t-s --syms           Display the symbol table\n");
 }
-
 
 int main(int argc, char *argv[]) 
 {
@@ -265,7 +326,10 @@ int main(int argc, char *argv[])
 
       }
     
- 
+      if ( !strcmp(argv[1], "-s")) {
+         printsymboltab((Elf32_Ehdr*) allelf);
+      }
+
     
     close (fd);
    return 0;

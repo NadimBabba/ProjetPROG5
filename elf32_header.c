@@ -11,6 +11,7 @@
 
 #include "elf32.h"
 
+// Phase1 , partie 1
 void write_elf32_hdr(Elf32_Ehdr* elfhdr) {
     int i;
     printf("ELF Header:\n");
@@ -86,6 +87,7 @@ void write_elf32_hdr(Elf32_Ehdr* elfhdr) {
     printf("  Section header string table index: %d\n", ELF32_R_SYM(elfhdr->e_shstrndx));
 
 }
+// Phase1 , partie 2
 Elf32_Shdr *ElfSheader(Elf32_Ehdr *hdr) {
 	return (Elf32_Shdr *)((char*) hdr + offset(hdr->e_shoff) );
 }
@@ -143,6 +145,7 @@ void printsection(Elf32_Ehdr* elfhdr, int indx) {
     printf ("  %2d", ELF32_R_VAL(shrd->sh_info));
     printf (" %2d\n", ELF32_R_VAL(shrd->sh_addralign));
 }
+// Phase1 , partie 3
 void printhexasectionindex(Elf32_Ehdr* elfhdr, int indx) {
     Elf32_Shdr *shrd = ElfSection(elfhdr, indx);
     char * strname = (char*) shstrtab + ELF32_R_VAL(shrd->sh_name);
@@ -188,6 +191,7 @@ void printhexasectionname(Elf32_Ehdr* elfhdr, char* sname) {
     printf("Hex dump of section %s %d\n", sname, indx);
 }
 
+// Phase1 , partie 4
 void printsymboltab(Elf32_Ehdr* elfhdr) {
     int indx = -1 ;
     char * strname;
@@ -204,13 +208,13 @@ void printsymboltab(Elf32_Ehdr* elfhdr) {
     }
 
     Elf32_Shdr *symtab = ElfSection(elfhdr, indx);
-    printf("\nSymbol table '%s' contains %d entries:\n", strname, ELF32_R_VAL(symtab->sh_size)/ELF32_R_VAL(symtab->sh_entsize));
+    printf("\nSymbol table '%s' contains %d entries:\n", strname, offset(symtab->sh_size)/ELF32_R_VAL(symtab->sh_entsize));
     printf("   Num:    Value  Size Type    Bind   Vis      Ndx Name\n");
     char* symaddr = (char*)elfhdr + offset(symtab->sh_offset);
 
 
     Elf32_Sym *symbol;
-    for(int i=0; i<ELF32_R_VAL(symtab->sh_size)/ELF32_R_VAL(symtab->sh_entsize); i++) {
+    for(int i=0; i<offset(symtab->sh_size)/ELF32_R_VAL(symtab->sh_entsize); i++) {
       symbol = &((Elf32_Sym *)symaddr)[i];
       switch (symbol->st_shndx) {
         case SHN_ABS: {
@@ -249,12 +253,78 @@ void printsymboltab(Elf32_Ehdr* elfhdr) {
        }
      }
 }
+// Phase1 , partie 5
+char * getsectionname(Elf32_Ehdr* elfhdr, int indx) {
+      Elf32_Shdr *shrd = ElfSection(elfhdr, indx);
+      return (char*) shstrtab + ELF32_R_VAL(shrd->sh_name);
+}
+
+void getsymboltab(Elf32_Ehdr* elfhdr, int isymb, char **SymbName,int *SymbVal) {
+    int indx = -1 ;
+    for (int i=0; i<ELF32_R_SYM(elfhdr->e_shnum); i++) {
+      Elf32_Shdr *shrd = ElfSection(elfhdr, i);
+       if (ELF32_R_VAL(shrd->sh_type) == SHT_SYMTAB) {
+          indx = i; 
+         break;
+      }
+    }
+    if (indx == -1) {
+      SymbName = NULL; // Error
+      return;
+    }
+
+    Elf32_Shdr *symtab = ElfSection(elfhdr, indx);
+    char* symaddr = (char*)elfhdr + offset(symtab->sh_offset);
+
+
+    Elf32_Sym *symbol= &((Elf32_Sym *)symaddr)[isymb];
+
+    *SymbVal = ELF32_R_VAL(symbol->st_value);
+    if (ELF32_ST_TYPE(symbol->st_info) == STT_SECTION) {
+      *SymbName = getsectionname(elfhdr, ELF32_ST_BIND(symbol->st_shndx)/16);
+      return;
+    }
+
+    Elf32_Shdr *strtab = ElfSection(elfhdr, ELF32_R_VAL(symtab->sh_link));
+    *SymbName =  (char *)elfhdr + offset(strtab->sh_offset) + ELF32_R_VAL(symbol->st_name);
+}
+void PrintRelocationSection(Elf32_Ehdr* elfhdr) {
+    for (int i=0; i<ELF32_R_SYM(elfhdr->e_shnum); i++) {
+      Elf32_Shdr *shrd = ElfSection(elfhdr, i);
+      if ((ELF32_R_VAL(shrd->sh_type) == SHT_RELA) ||  (ELF32_R_VAL(shrd->sh_type) == SHT_REL)) {
+         char * strname = (char*) shstrtab + ELF32_R_VAL(shrd->sh_name);
+         printf("\nRelocation section '%s' at offset 0x%x contains %d entries:\n", strname, offset(shrd->sh_offset), 
+			ELF32_R_VAL(shrd->sh_size)/ELF32_R_VAL(shrd->sh_entsize));
+         printf(" Offset     Info    Type            Sym.Value  Sym. Name\n");
+         char* reladdr = (char*)elfhdr + offset(shrd->sh_offset);
+         for (int j=0; j<ELF32_R_VAL(shrd->sh_size)/ELF32_R_VAL(shrd->sh_entsize); j++) {
+             Elf32_Rel* RelEntry = &((Elf32_Rel *)reladdr)[j];
+	     printf("%08x  %08x", ELF32_R_VAL(RelEntry->r_offset), ELF32_MR_INFO(RelEntry->r_info)); 
+             switch (ELF32_R_TYPE(RelEntry->r_info)) {
+   		case R_ARM_NONE : printf(" %-17s",  "R_ARM_NONE");break;
+   		case R_ARM_PC24 : printf(" %-17s",  "R_ARM_PC24");break;
+   		case R_ARM_ABS32 : printf(" %-17s",  "R_ARM_ABS32");break;
+   		case R_ARM_REL32 : printf(" %-17s",  "R_ARM_REL32");break;
+   		case R_ARM_CALL : printf(" %-17s",  "R_ARM_CALL");break;
+   		case R_ARM_JUMP24 : printf(" %-17s",  "R_ARM_JUMP24");break;
+		default : printf("%x %-17s", ELF32_R_TYPE(RelEntry->r_info), "Type string TO DO");break;
+             }
+            char* SymbName = NULL;
+            int   SymbVal;
+            getsymboltab(elfhdr, ((RelEntry->r_info<<8)>>24), &SymbName, &SymbVal);	      
+	    printf(" %08x", SymbVal);//TODO value ?
+	    printf("   %s\n", SymbName);
+         }
+       }
+    }
+}
+// Phase1 , Fin partie 5
 
 void usage()
 {
   printf("Usage : elf_header option <ELF File name>\nWhere Option is :\n");
-  printf("\t--file-header       Display the ELF file header\n");
-  printf("\t--section-headers   Display the sections' header\n");
+  printf("\t-h , --file-header       Display the ELF file header\n");
+  printf("\t-S , --section-headers   Display the sections' header\n");
   printf("\t-s --syms           Display the symbol table\n");
 }
 
@@ -294,18 +364,17 @@ int main(int argc, char *argv[])
         printf( " Error reading elf file\n");
         return 1;
     }
-     //printf("nb byte read %d\n",sz);
 
  
      Elf32_Shdr *shrd0 = ElfSection(elfhdr, 0);
      Elf32_Shdr* sh_strtab = &shrd0[ELF32_R_SYM(elfhdr->e_shstrndx)];
      shstrtab = (char*) allelf + ELF32_R_VAL(sh_strtab->sh_offset) + 256;
-
+     // Phase1 , partie 1
      if (!strcmp(argv[1], "--file-header") || !strcmp(argv[1], "-h")) {
           write_elf32_hdr(elfhdr);
       }
 
-
+      // Phase1 , partie 2
       if ( !strcmp(argv[1], "--section-headers") || !strcmp(argv[1], "-S") || !strcmp(argv[1], "--sections")) {
         for (i=0; i<ELF32_R_SYM(elfhdr->e_shnum); i++) {
           printsection((Elf32_Ehdr*) allelf, i);
@@ -315,7 +384,7 @@ int main(int argc, char *argv[])
         printf("  I (info), L (link order), G (group), T (TLS), E (exclude), x (unknown)\n");
         printf("  O (extra OS processing required) o (OS specific), p (processor specific)\n");
        }
-       
+      // Phase1 , partie 3 
       if ( !strcmp(argv[1], "-x")) {
          int nums = atoi(argv[2]);        
          if (nums && strcmp(argv[2], "0")) {
@@ -325,10 +394,15 @@ int main(int argc, char *argv[])
          }
 
       }
-    
+      // Phase1 , partie 4
       if ( !strcmp(argv[1], "-s")) {
          printsymboltab((Elf32_Ehdr*) allelf);
       }
+      // Phase1 , partie 5
+      if ( !strcmp(argv[1], "-r")) {
+         PrintRelocationSection((Elf32_Ehdr*) allelf);
+      }
+
 
     
     close (fd);

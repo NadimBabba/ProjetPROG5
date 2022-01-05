@@ -179,10 +179,18 @@ typedef struct {
 
 
 #define ELF32_R_SYM(i) ((i)>>8)
-#define ELF32_R_TYPE(i) ((unsigned char)(i))
+#define ELF32_R_TYPE(i) ((i)>>24)
 #define ELF32_R_INFO(s,t) (((s)<<8)+(unsigned char)(t))
 #define ELF32_R_VAL(i) ((i)>>24)
-
+enum Arm_Rel_Type {
+   R_ARM_NONE = 0 ,
+   R_ARM_PC24 = 1 ,
+   R_ARM_ABS32 = 2 ,
+   R_ARM_REL32 = 3 ,
+   R_ARM_CALL = 28 ,
+   R_ARM_JUMP24 = 29 
+};
+   
 // Program Header
 typedef struct {
     Elf32_Word p_type;
@@ -208,4 +216,6 @@ enum Elf32_Phdr_type {
 };
 
 #define offset(i) (((((i/256)>>12)<<8)|((i/256)<<16)>>4)>>12)
+#define ELF32_MR_INFO(i) (unsigned short) (ELF32_R_SYM(i)>>16) + (unsigned short) (ELF32_R_SYM(i))
+
 #endif

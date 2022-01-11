@@ -13,8 +13,8 @@
 #include "elf32_dump.h"
 
 int *tabindx;
-int TextAdresse = 0x70 ;
-int DataAdresse = 0x2000 ;
+int TextAdress = 0x20 ;
+int DataAdresse = 0x1000 ;
 Elf32_Phdr ProgramHeader;
 
 #define offset_inv(i) (((((i*256)<<12)>>8)|((i*256)>>16)<<4)<<12)
@@ -50,6 +50,30 @@ void FixeSymbolNdx (Elf32_Ehdr* elfhdr) {
                } 
        }
      }
+}
+
+void RelAbs (Elf32_Ehdr* elfhdr) {
+ int indx = -1 ;
+  for (int i=0; i<ELF32_R_SYM(elfhdr->e_shnum); i++) {
+      Elf32_Shdr *shrd = ElfSection(elfhdr, i);
+      if (ELF32_R_VAL(shrd->sh_type) == SHT_SYMTAB) {
+          indx = i; 
+         break;
+      }
+    }
+  Elf32_Shdr *symtab = ElfSection(elfhdr, indx);
+  char* symaddr = (char*)elfhdr + offset(symtab->sh_offset);
+    Elf32_Sym *symbol;
+    for(int i=0; i<offset(symtab->sh_size)/ELF32_R_VAL(symtab->sh_entsize); i++) {
+      symbol = &((Elf32_Sym *)symaddr)[i];
+      switch ELF32_ST_TYPE(symbol->st_info) {
+        case STT_NOTYPE:
+          symbol->st_value= (Elf32_Addr) ((ELF32_R_VAL(symbol->st_value) + TextAdress)<<24);
+        break;
+        default:
+        break;
+      } 
+    }
 }
 
 void FixeSectionsoffset (Elf32_Ehdr* elfhdr, int nbsections, int* sectionsize) {
@@ -106,6 +130,7 @@ void RemoveRelSections(Elf32_Ehdr* elfhdr, char* fname) {
     unsigned int nbrels = NBRelocationSections(elfhdr);
     unsigned int initianbs = ELF32_R_SYM(elfhdr->e_shnum);
     FixeSymbolNdx(elfhdr) ; 
+    RelAbs(elfhdr);
     int sectionssize;      
     FixeSectionsoffset(elfhdr, (initianbs - nbrels), &sectionssize) ; 
     //printf ("\n Nb section init %d remove %d new %d / %x   %x\n", initianbs, nbrels, (initianbs - nbrels) , elfhdr->e_shnum, elfhdr->e_shstrndx);

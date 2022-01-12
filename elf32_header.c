@@ -326,6 +326,8 @@ void usage()
   printf("\t-h , --file-header       Display the ELF file header\n");
   printf("\t-S , --section-headers   Display the sections' header\n");
   printf("\t-s --syms           Display the symbol table\n");
+  printf("\t-r --relocs         Display the relocations (if present)\n");
+  printf("\t-x --hex-dump=<number|name>\nDump the contents of section <number|name> as bytes\n");
 }
 
 int main(int argc, char *argv[]) 

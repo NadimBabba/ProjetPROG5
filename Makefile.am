@@ -15,7 +15,7 @@ LDADD=-lpthread
 SUBDIRS=
 SUBDIRS+=. Examples_loader
 
-bin_PROGRAMS=
+bin_PROGRAMS= elf32_phase1 elf32_phase2
 bin_PROGRAMS+=ARM_runner_example
 
 
@@ -25,6 +25,9 @@ EXTRA_DIST=filtre.pl
 SIMULATOR_INTERFACE=csapp.h csapp.c scanner.h scanner.l gdb_protocol.h gdb_protocol.c arm_simulator_interface.h arm_simulator_interface.c
 
 ARM_runner_example_SOURCES=$(COMMON) $(SIMULATOR_INTERFACE) ARM_runner_example.c
+elf32_phase1_SOURCES = elf32_header.c
+elf32_phase2_SOURCES = elf32_etape6.c elf32_dump.c
+
 
 EXTRA_DIST+=sample_run.sh
 

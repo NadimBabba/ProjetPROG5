@@ -181,7 +181,8 @@ typedef struct {
 #define ELF32_R_SYM(i) ((i)>>8)
 #define ELF32_R_TYPE(i) ((i)>>24)
 #define ELF32_R_INFO(s,t) (((s)<<8)+(unsigned char)(t))
-#define ELF32_R_VAL(i) ((i)>>24)
+#define ELF32_R_VAL(i) ((i) >> 24)
+#define be32tole(i)  ((unsigned int) __builtin_bswap32(i))
 enum Arm_Rel_Type {
    R_ARM_NONE = 0 ,
    R_ARM_PC24 = 1 ,

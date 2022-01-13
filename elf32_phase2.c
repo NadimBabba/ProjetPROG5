@@ -7,13 +7,14 @@
 #include <sys/stat.h>
 #include <stdlib.h>
 
-//#include <elf.h>
+#include <getopt.h>
+#include <endian.h>
 
 #include "elf32.h"
 #include "elf32_dump.h"
 
 int *tabindx;
-int TextAdress = 0x20 ;
+int TextAdresse = 0x20 ;
 int DataAdresse = 0x1000 ;
 Elf32_Phdr ProgramHeader;
 
@@ -68,8 +69,11 @@ void RelAbs (Elf32_Ehdr* elfhdr) {
       symbol = &((Elf32_Sym *)symaddr)[i];
       switch ELF32_ST_TYPE(symbol->st_info) {
         case STT_NOTYPE:
-          symbol->st_value= (Elf32_Addr) ((ELF32_R_VAL(symbol->st_value) + TextAdress)<<24);
-        break;
+          if ((ELF32_ST_BIND(symbol->st_shndx)/16) == 1) 
+              symbol->st_value= (Elf32_Addr) be32toh (ELF32_R_VAL(symbol->st_value) + TextAdresse);
+          else 
+              symbol->st_value= (Elf32_Addr) be32toh (ELF32_R_VAL(symbol->st_value) + DataAdresse);
+          break;
         default:
         break;
       } 
@@ -126,7 +130,7 @@ int NBRelocationSections(Elf32_Ehdr* elfhdr) {
     return nb;
 }
 
-void RemoveRelSections(Elf32_Ehdr* elfhdr, char* fname) {
+void RemoveRelSections(Elf32_Ehdr* elfhdr, char* outfname) {
     unsigned int nbrels = NBRelocationSections(elfhdr);
     unsigned int initianbs = ELF32_R_SYM(elfhdr->e_shnum);
     FixeSymbolNdx(elfhdr) ; 
@@ -137,10 +141,6 @@ void RemoveRelSections(Elf32_Ehdr* elfhdr, char* fname) {
     elfhdr->e_shnum = (Elf32_Half) ((initianbs - nbrels)<<8);
     elfhdr->e_shstrndx = (Elf32_Half) ((tabindx[ELF32_R_SYM(elfhdr->e_shstrndx)])<<8); //TODO 9 get strtab
     //printf ("\n Nb section init %d remove %d new %d / %x   %x\n", initianbs, nbrels, (initianbs - nbrels) , elfhdr->e_shnum, elfhdr->e_shstrndx);
-    char outfname[126];
-    strcpy(outfname, fname);
-    outfname[strlen(outfname)-2]='\0';
-    strcat(outfname, "_E6.o");
 
     FILE* fd = fopen(outfname, "wb"); 
     fwrite(elfhdr, offset(elfhdr->e_shoff), 1, fd);
@@ -196,12 +196,50 @@ char* ReadElf32(char* fname) {
    close (fd);
    return allelf;
 }
+void usage(char* arg) {
+}
 int main(int argc, char *argv[]) 
 {
     char* allelf;
     Elf32_Ehdr* elfhdr;
+    char* OutFileName=NULL;
+	  int opt;
+ 
+	struct option longopts[] = {
+		{ "Ttext", required_argument, NULL, 't' },
+		{ "Tdata", required_argument, NULL, 'd' },
+		{ "o", required_argument, NULL, 'o' },
+		{ "help", no_argument, NULL, 'h' },
+		{ NULL, 0, NULL, 0 }
+	};
 
-    allelf = ReadElf32(argv[argc-1]);
+	while ((opt = getopt_long(argc, argv, "S:H:d:h", longopts, NULL)) != -1) {
+		switch(opt) {
+		case 't':
+			TextAdresse = (int) strtol(optarg, NULL, 0);
+			break;
+		case 'd':
+			DataAdresse = (int) strtol(optarg, NULL, 0);
+			break;
+		case 'o':
+       OutFileName = optarg;
+       break;
+    case 'h':
+			usage(argv[0]);
+			exit(0);
+		default:
+			fprintf(stderr, "Unrecognized option %c\n", opt);
+			usage(argv[0]);
+			exit(1);
+		}
+	}
+     
+     if (optind >= argc) {
+               fprintf(stderr, "Expected elf filename after options\n");
+               exit(EXIT_FAILURE);
+     }
+
+    allelf = ReadElf32(argv[optind]);
 
     if (allelf == NULL)
           return 1;
@@ -211,7 +249,7 @@ int main(int argc, char *argv[])
  
 
    
-   RemoveRelSections(elfhdr, argv[argc-1]);
+   RemoveRelSections(elfhdr, OutFileName);
 
    return 0;
 

@@ -4,16 +4,15 @@
 #include<string.h> 
 #include <malloc.h>
 #include <unistd.h>
-#include <sys/stat.h>
 #include <stdlib.h>
+
+#include <endian.h>
 
 //#include <elf.h>
 
 #include "elf32.h"
 
 char* shstrtab;
-
-
 
 // Phase1 , partie 1
 void write_elf32_hdr(Elf32_Ehdr* elfhdr) {
@@ -101,6 +100,7 @@ Elf32_Shdr *ElfSection(Elf32_Ehdr *hdr, int idx) {
 }
  
 
+
 void printsection(Elf32_Ehdr* elfhdr, int indx) {
     Elf32_Shdr *shrd = ElfSection(elfhdr, indx);
     if (indx==0) {
@@ -152,7 +152,7 @@ void printhexasectionindex(Elf32_Ehdr* elfhdr, int indx) {
     Elf32_Shdr *shrd = ElfSection(elfhdr, indx);
     char * strname = (char*) shstrtab + ELF32_R_VAL(shrd->sh_name);
     printf("Hex dump of section '%s':\n", strname);
-    char* shdata = (char*) elfhdr + offset(shrd->sh_offset) ; //(char*) elfhdr + offset(shrd->sh_offset) + 256;
+    char* shdata = (char*) elfhdr + ELF32_R_VAL(shrd->sh_offset) + 256;
     for (int i=0; i< offset(shrd->sh_size); ) {
 
        printf("  0x%08x ", i);
@@ -161,7 +161,7 @@ void printhexasectionindex(Elf32_Ehdr* elfhdr, int indx) {
          if (i+j > offset(shrd->sh_size)) {
             printf("  ");
          } else {
-           printf("%02x",  (unsigned char) (shdata[i+j]));
+           printf("%02x",  (shdata[i+j]));
          }
          k++;
          if (k ==4) { printf(" "); k=0;}
@@ -169,7 +169,7 @@ void printhexasectionindex(Elf32_Ehdr* elfhdr, int indx) {
 
        for (int j=0; j<16;j++) { 
          if (i+j > offset(shrd->sh_size)) break;       
-         printf("%c",  (((unsigned char)(shdata[i+j]) >= 32) && ((unsigned char)(shdata[i+j]) <=127)) ? ((unsigned char)(shdata[i+j])) : '.');
+         printf("%c",  (shdata[i+j]) ? (shdata[i+j]) : '.');
        }
 
        printf("\n");
@@ -228,7 +228,7 @@ void printsymboltab(Elf32_Ehdr* elfhdr) {
                {
 		Elf32_Shdr *strtab = ElfSection(elfhdr, ELF32_R_VAL(symtab->sh_link));
  		const char *name = (const char *)elfhdr + offset(strtab->sh_offset) + ELF32_R_VAL(symbol->st_name);
-                printf("%6d: %08x %5x", i, ELF32_R_VAL(symbol->st_value), ELF32_R_VAL(symbol->st_size));
+                printf("%6d: %08x %5x", i, be32tole(symbol->st_value), be32tole(symbol->st_size));
                 switch(ELF32_ST_TYPE(symbol->st_info)) {
 		    case STT_NOTYPE: printf (" NOTYPE "); break;
  		    case STT_OBJECT: printf (" OBJECT "); break;
@@ -301,7 +301,7 @@ void PrintRelocationSection(Elf32_Ehdr* elfhdr) {
          char* reladdr = (char*)elfhdr + offset(shrd->sh_offset);
          for (int j=0; j<ELF32_R_VAL(shrd->sh_size)/ELF32_R_VAL(shrd->sh_entsize); j++) {
              Elf32_Rel* RelEntry = &((Elf32_Rel *)reladdr)[j];
-	     printf("%08x  %08x", ELF32_R_VAL(RelEntry->r_offset), ELF32_MR_INFO(RelEntry->r_info)); 
+	     printf("%08x  %08x", be32tole(RelEntry->r_offset), ELF32_MR_INFO(RelEntry->r_info)); 
              switch (ELF32_R_TYPE(RelEntry->r_info)) {
    		case R_ARM_NONE : printf(" %-17s",  "R_ARM_NONE");break;
    		case R_ARM_PC24 : printf(" %-17s",  "R_ARM_PC24");break;
@@ -320,4 +320,5 @@ void PrintRelocationSection(Elf32_Ehdr* elfhdr) {
        }
     }
 }
+// Phase1 , Fin partie 5
 

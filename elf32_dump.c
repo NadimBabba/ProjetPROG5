@@ -151,8 +151,8 @@ void printsection(Elf32_Ehdr* elfhdr, int indx) {
 void printhexasectionindex(Elf32_Ehdr* elfhdr, int indx) {
     Elf32_Shdr *shrd = ElfSection(elfhdr, indx);
     char * strname = (char*) shstrtab + ELF32_R_VAL(shrd->sh_name);
-    printf("Hex dump of section '%s':\n", strname);
-    char* shdata = (char*) elfhdr + ELF32_R_VAL(shrd->sh_offset) + 256;
+    printf("\nHex dump of section '%s':\n", strname);
+    char* shdata = (char*) elfhdr + offset(shrd->sh_offset) ; 
     for (int i=0; i< offset(shrd->sh_size); ) {
 
        printf("  0x%08x ", i);
@@ -161,7 +161,7 @@ void printhexasectionindex(Elf32_Ehdr* elfhdr, int indx) {
          if (i+j > offset(shrd->sh_size)) {
             printf("  ");
          } else {
-           printf("%02x",  (shdata[i+j]));
+           printf("%02x",  (unsigned char) (shdata[i+j]));
          }
          k++;
          if (k ==4) { printf(" "); k=0;}
@@ -169,10 +169,10 @@ void printhexasectionindex(Elf32_Ehdr* elfhdr, int indx) {
 
        for (int j=0; j<16;j++) { 
          if (i+j > offset(shrd->sh_size)) break;       
-         printf("%c",  (shdata[i+j]) ? (shdata[i+j]) : '.');
+         printf("%c",  (((unsigned char)(shdata[i+j]) >= 32) && ((unsigned char)(shdata[i+j]) <=127)) ? ((unsigned char)(shdata[i+j])) : '.');
        }
 
-       printf("\n");
+       printf("\n\n");
        i=i+16;
     }
 }
@@ -190,7 +190,7 @@ void printhexasectionname(Elf32_Ehdr* elfhdr, char* sname) {
       printf("readelf: Warning: Section '%s' was not dumped because it does not exist!\n", sname);
       return;
     }
-    printf("Hex dump of section %s %d\n", sname, indx);
+    printhexasectionindex(elfhdr, indx);
 }
 
 // Phase1 , partie 4
